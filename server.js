@@ -39,7 +39,6 @@ export async function createApp({ dataDir = join(root, 'data') } = {}) {
   db.prepare('INSERT OR IGNORE INTO workspace VALUES (1, ?, 1)').run(JSON.stringify(seedState()));
   const old = db.prepare('SELECT data FROM workspace WHERE id=1').get();
   if (JSON.parse(old.data).schemaVersion !== 2) {
-    // VACUUM INTO crea una copia coherente de SQLite, también si existe WAL.
     const backup = join(dataDir, `respaldo-antes-caso2-${Date.now()}.sqlite`);
     db.exec(`VACUUM INTO '${backup.replaceAll("'", "''")}'`);
     db.prepare('UPDATE workspace SET data=?, revision=revision+1 WHERE id=1').run(JSON.stringify(normalize(JSON.parse(old.data))));
@@ -204,7 +203,7 @@ export async function createApp({ dataDir = join(root, 'data') } = {}) {
             } else {
               const values = credentials(data);
               if (db.prepare('SELECT id FROM users WHERE email=?').get(values.email)) throw new DomainError('Ese correo ya está registrado.', 409);
-              db.prepare('INSERT INTO users VALUES (?,?,?,?,?,0)').run(randomUUID(), values.name, values.email, passwordHash(values.password), data.role);
+              db.prepare('INSERT INTO users VALUES (?,?,?,?,?,0)').run(randomUUID(), values.name, values.email, passwordHash(password), data.role);
             }
             return json(response, { ok: true });
           }
@@ -278,7 +277,6 @@ export async function createApp({ dataDir = join(root, 'data') } = {}) {
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
   const port = Number(process.env.PORT || 3000);
-  process.env.AUSTRALPACK_ORIGIN ||= `http://0.0.0.0:${port}`;
   createApp().then(app => {
     app.server.listen(port, '0.0.0.0', () => {
       console.log(`AustralPack Circular SpA escuchando en el puerto ${port}`);
