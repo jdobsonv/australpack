@@ -64,8 +64,10 @@ export async function createApp({ dataDir = join(root, 'data') } = {}) {
     return user;
   }
   function json(response, value, status = 200) {
-    response.writeHead(status, { 'Content-Type':'application/json; charset=utf-8' });
-    response.end(JSON.stringify(value));
+    if (!response.headersSent) {
+      response.writeHead(status, { 'Content-Type':'application/json; charset=utf-8' });
+      response.end(JSON.stringify(value));
+    }
   }
   async function body(request) {
     const chunks = []; let size = 0;
@@ -203,7 +205,7 @@ export async function createApp({ dataDir = join(root, 'data') } = {}) {
             } else {
               const values = credentials(data);
               if (db.prepare('SELECT id FROM users WHERE email=?').get(values.email)) throw new DomainError('Ese correo ya está registrado.', 409);
-              db.prepare('INSERT INTO users VALUES (?,?,?,?,?,0)').run(randomUUID(), values.name, values.email, passwordHash(password), data.role);
+              db.prepare('INSERT INTO users VALUES (?,?,?,?,?,0)').run(randomUUID(), values.name, values.email, passwordHash(values.password), data.role);
             }
             return json(response, { ok: true });
           }
@@ -270,7 +272,9 @@ export async function createApp({ dataDir = join(root, 'data') } = {}) {
       response.end(await readFile(join(root,'public',file)));
     } catch (error) {
       if (!(error instanceof DomainError)) console.error(error.message);
-      json(response, { error:error instanceof DomainError ? error.message : 'No se pudo completar la operación.' }, error instanceof DomainError ? error.status : 500);
+      if (!response.headersSent) {
+        json(response, { error:error instanceof DomainError ? error.message : 'No se pudo completar la operación.' }, error instanceof DomainError ? error.status : 500);
+      }
     }
   });
   return { server, close: () => new Promise(resolveClose => server.close(() => { db.close(); resolveClose(); })) };
