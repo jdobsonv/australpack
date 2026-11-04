@@ -277,8 +277,11 @@ export async function createApp({ dataDir = join(root, 'data') } = {}) {
   return { server, close: () => new Promise(resolveClose => server.close(() => { db.close(); resolveClose(); })) };
 }
 if (process.argv[1] && resolve(process.argv[1]) === fileURLToPath(import.meta.url)) {
-  const port = Number(process.env.PORT || process.env.AUSTRALPACK_PORT || 3000);
-  process.env.AUSTRALPACK_ORIGIN ||= `http://australpack.localhost:${port}`;
-  const app = await createApp({ dataDir:process.env.AUSTRALPACK_DATA_DIR || join(root,'data') });
-  app.server.listen(port, process.env.AUSTRALPACK_HOST || '0.0.0.0', () => console.log(`AustralPack Circular SpA: ${process.env.AUSTRALPACK_ORIGIN}`));
+  const port = Number(process.env.PORT || 3000);
+  process.env.AUSTRALPACK_ORIGIN ||= `http://0.0.0.0:${port}`;
+  createApp().then(app => {
+    app.server.listen(port, '0.0.0.0', () => {
+      console.log(`AustralPack Circular SpA escuchando en el puerto ${port}`);
+    });
+  });
 }
